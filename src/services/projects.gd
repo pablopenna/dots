@@ -415,37 +415,59 @@ class ExternalProjectInfo extends RefCounted:
 		_is_loaded = true
 		loaded.emit()
 	
+	const UID_CACHE_ENTRY_HEADER_SIZE := 12
+
 	func _load_icon(cfg: ConfigFile) -> Texture2D:
-		var result := _default_icon
 		var icon_path: String = cfg.get_value("application", "config/icon", "")
-		if not icon_path: return result
+		if icon_path.is_empty():
+			return _default_icon
 		var project_path := self._project_path.get_base_dir() + "/"
 		if icon_path.begins_with("uid://"):
-			var uid := ResourceUID.text_to_id(icon_path)
-			if uid != ResourceUID.INVALID_ID:
-				var uid_cache := FileAccess.open(project_path + ".godot/uid_cache.bin", FileAccess.READ)
-				if uid_cache != null:
-					var entries := uid_cache.get_32()
-					for i in entries:
-						var id := uid_cache.get_64()
-						var length := uid_cache.get_32()
-						if id == uid:
-							icon_path = uid_cache.get_buffer(length).get_string_from_utf8()
-							break
-						else:
-							uid_cache.seek(uid_cache.get_position() + length)
-
+			icon_path = _resolve_uid_icon_path(icon_path, project_path)
 		icon_path = icon_path.replace("res://", project_path)
-		
-		if FileAccess.file_exists(icon_path):
-			var icon_image := Image.new()
-			var err := icon_image.load(icon_path)
-			if not err:
-				icon_image.resize(
-					_default_icon.get_width(), _default_icon.get_height(), Image.INTERPOLATE_LANCZOS
-				)
-				result = ImageTexture.create_from_image(icon_image)
-		return result
+		return _load_icon_texture(icon_path)
+
+	func _resolve_uid_icon_path(uid_icon_path: String, project_path: String) -> String:
+		var resource_uid := ResourceUID.text_to_id(uid_icon_path)
+		if resource_uid == ResourceUID.INVALID_ID:
+			return uid_icon_path
+		var uid_cache_path := project_path.path_join(".godot/uid_cache.bin")
+		var uid_cache_file := FileAccess.open(uid_cache_path, FileAccess.READ)
+		if uid_cache_file == null:
+			return uid_icon_path
+		var cached_icon_path := _find_uid_cache_resource_path(uid_cache_file, resource_uid)
+		return cached_icon_path if not cached_icon_path.is_empty() else uid_icon_path
+
+	func _find_uid_cache_resource_path(uid_cache_file: FileAccess, resource_uid: int) -> String:
+		var file_length := uid_cache_file.get_length()
+		var entry_count := uid_cache_file.get_32()
+		# Each entry needs at least 12 bytes for its id and path length.
+		if entry_count <= 0 or entry_count >= file_length / UID_CACHE_ENTRY_HEADER_SIZE + 1:
+			return ""
+		for _entry in entry_count:
+			if uid_cache_file.get_position() + UID_CACHE_ENTRY_HEADER_SIZE > file_length:
+				break
+			var cached_uid := uid_cache_file.get_64()
+			var cached_path_length := uid_cache_file.get_32()
+			if cached_path_length <= 0:
+				break
+			if uid_cache_file.get_position() + cached_path_length > file_length:
+				break
+			if cached_uid == resource_uid:
+				return uid_cache_file.get_buffer(cached_path_length).get_string_from_utf8()
+			uid_cache_file.seek(uid_cache_file.get_position() + cached_path_length)
+		return ""
+
+	func _load_icon_texture(icon_path: String) -> Texture2D:
+		if not FileAccess.file_exists(icon_path):
+			return _default_icon
+		var icon_image := Image.new()
+		if icon_image.load(icon_path) != OK:
+			return _default_icon
+		icon_image.resize(
+			_default_icon.get_width(), _default_icon.get_height(), Image.INTERPOLATE_LANCZOS
+		)
+		return ImageTexture.create_from_image(icon_image)
 	
 	# TODO type
 	func sort_editor_options(options: Array) -> void:
