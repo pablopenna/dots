@@ -5,7 +5,9 @@ extends Node
 ## Handles CLI vs GUI mode detection and initialization.
 
 
+## Packed scene for gui scene path.
 @export_file() var gui_scene_path: String
+
 
 func _ready() -> void:
 	var args := OS.get_cmdline_args()
@@ -20,6 +22,7 @@ func _ready() -> void:
 		add_child.call_deferred((load(gui_scene_path) as PackedScene).instantiate())
 	pass
 
+
 func _is_cli_mode(args: PackedStringArray) -> bool:
 	if args.is_empty():
 		return false
@@ -31,6 +34,7 @@ func _is_cli_mode(args: PackedStringArray) -> bool:
 		return grammar.supports_flag("", "", first)
 
 	return grammar.supports_verb("", first) or grammar.supports_namespace(first)
+
 
 func _exit() -> void:
 	get_tree().quit()
