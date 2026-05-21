@@ -30,10 +30,7 @@ class List extends RefCounted:
 		return project
 	
 	func all() -> Array[Item]:
-		var result: Array[Item] = []
-		for x: Item in _projects.values():
-			result.append(x)
-		return result
+		return _projects.values()
 	
 	func retrieve(project_path: String) -> Item:
 		return _projects[project_path]
@@ -50,7 +47,7 @@ class List extends RefCounted:
 	
 	func get_owners_of(editor: LocalEditors.Item) -> Array[Item]:
 		var result: Array[Item]
-		for project in all():
+		for project: Item in _projects.values():
 			if project.editor_is(editor):
 				result.append(project)
 		return result
@@ -215,14 +212,14 @@ class Item:
 		result_args.append_array(args)
 		return editor.as_process(result_args)
 	
-	func fmt_string(str: String) -> String:
+	func fmt_string(string_val: String) -> String:
 		if not has_invalid_editor:
 			var editor := _local_editors.retrieve(editor_path)
-			str = editor.fmt_string(str)
-		str = str.replace(
+			string_val = editor.fmt_string(string_val)
+		string_val = string_val.replace(
 			'{{PROJECT_DIR}}', ProjectSettings.globalize_path(self.path).get_base_dir()
 		)
-		return str
+		return string_val
 	
 	func as_fmt_process(process_path: String, args: PackedStringArray) -> OSProcessSchema:
 		var result_path := process_path

@@ -3,56 +3,39 @@ extends RefCounted
 ## Provides utils.
 
 
+static var _re_version := _compile_re(r"godot[-_]?v?(\d+(?:\.\d+)+)")
+static var _re_channel := _compile_re(r"-(pre-alpha|alpha|beta|rc|stable|dev)(\d*)")
+static var _re_any_version := _compile_re(r"(\d+(?:\.\d+)+)")
+static var _re_mono := _compile_re(r"(?:^|[-_.])mono(?:$|[-_.])")
+
+static func _compile_re(pattern: String) -> RegEx:
+	var re := RegEx.new()
+	re.compile(pattern)
+	return re
+
+
 static func guess_editor_name(file_name: String) -> String:
 	var base := _strip_known_extensions(file_name.get_file())
-
 	var lower := base.to_lower()
-
-	# Allow versions like 4.1, 4.1.1, 4.1.1.1, etc.
-	var re_version := RegEx.new()
-	re_version.compile(r"godot[-_]?v?(\d+(?:\.\d+)+)") 
-
-	var re_channel := RegEx.new()
-	re_channel.compile(r"-(pre-alpha|alpha|beta|rc|stable|dev)(\d*)")
-
-	var version := ""
-	var channel := ""
-	var channel_num := ""
-	var re_mono := RegEx.new()
-	re_mono.compile(r"(?:^|[-_.])mono(?:$|[-_.])")
-	var mono := re_mono.search(lower) != null
-
-	var m := re_version.search(lower)
-	if m:
-		version = m.get_string(1)
-
-	var c := re_channel.search(lower)
-	if c:
-		channel = c.get_string(1)
-		channel_num = c.get_string(2)
-
-	if version == "":
-		# Fallback: grab first version-looking substring
-		var re_any_ver := RegEx.new()
-		re_any_ver.compile(r"(\d+(?:\.\d+)+)")
-		var mv := re_any_ver.search(lower)
-		if mv:
-			version = mv.get_string(1)
-
-	if version == "":
-		return base # fallback
-
+	var version_match := _re_version.search(lower)
+	var channel_match := _re_channel.search(lower)
+	var version := version_match.get_string(1) if version_match else ""
+	var channel := channel_match.get_string(1) if channel_match else ""
+	var channel_number := channel_match.get_string(2) if channel_match else ""
+	if version.is_empty():
+		var any_version_match := _re_any_version.search(lower)
+		version = any_version_match.get_string(1) if any_version_match else ""
+	if version.is_empty():
+		return base
 	var suffix := ""
-	if channel != "":
+	if not channel.is_empty():
 		suffix = " " + channel
-		if channel_num != "":
-			suffix += channel_num
-
-	var name := "Godot v%s%s" % [version, suffix]
-	if mono:
-		name += " mono"
-
-	return name
+		if not channel_number.is_empty():
+			suffix += channel_number
+	var editor_name := "Godot v%s%s" % [version, suffix]
+	if _re_mono.search(lower) != null:
+		editor_name += " mono"
+	return editor_name
 
 
 static func _strip_known_extensions(base: String) -> String:
@@ -108,8 +91,8 @@ static func fit_height(max_height: float, cur_size: Vector2i, callback: Callable
 	var scale_ratio := max_height / (cur_size.y * Config.EDSCALE)
 	if scale_ratio < 1:
 		callback.call(Vector2i(
-			cur_size.x * Config.EDSCALE * scale_ratio,
-			cur_size.y * Config.EDSCALE * scale_ratio
+			int(cur_size.x * Config.EDSCALE * scale_ratio),
+			int(cur_size.y * Config.EDSCALE * scale_ratio)
 		))
 
 
