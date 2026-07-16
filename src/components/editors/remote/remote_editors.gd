@@ -1538,15 +1538,32 @@ static func _make_runnable(abs_exec_path: String) -> void:
 
 
 func _unzip_downloaded(downloaded_abs_path: String, root_unzip_folder_name: String) -> String:
-	var zip_content_dir := "%s/%s" % [Config.VERSIONS_PATH.ret(), root_unzip_folder_name]
-	if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(zip_content_dir)):
-		zip_content_dir += "-%s" % uuid.v4().substr(0, 8)
-	zip_content_dir += "/"
+	var extract_to_same_folder := Config.extract_to_same_folder.ret() as bool
+	var zip_content_dir := _resolve_unzip_dir(
+		Config.versions_path.ret() as String,
+		root_unzip_folder_name,
+		extract_to_same_folder,
+	)
 	if zip.unzip(downloaded_abs_path, zip_content_dir) != OK:
 		# zip.unzip creates the folder first; drop the empty or partial extraction.
-		edir.remove_recursive(ProjectSettings.globalize_path(zip_content_dir))
+		# A same-folder install extracts into the versions dir, which must survive.
+		if not extract_to_same_folder:
+			edir.remove_recursive(ProjectSettings.globalize_path(zip_content_dir))
 		return ""
 	return zip_content_dir
+
+
+## Returns the directory a downloaded build is extracted into. Same-folder installs
+## unpack directly into the versions dir.
+static func _resolve_unzip_dir(
+	versions_path: String, root_unzip_folder_name: String, extract_to_same_folder: bool
+) -> String:
+	if extract_to_same_folder:
+		return versions_path + "/"
+	var zip_content_dir := "%s/%s" % [versions_path, root_unzip_folder_name]
+	if DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(zip_content_dir)):
+		zip_content_dir += "-%s" % uuid.v4().substr(0, 8)
+	return zip_content_dir + "/"
 
 
 ## Hands download rows to the callable given to [method RemoteEditorsControl.init].

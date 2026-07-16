@@ -363,26 +363,42 @@ func _on_editors_list_item_selected(item: EditorListItemControl) -> void:
 	_sidebar.refresh_actions(item.get_actions())
 
 
-## Removes an editor and optionally deletes its directory.
-func _on_editors_list_item_removed(item_data: LocalEditors.Item, remove_dir: bool) -> void:
+## Removes an editor and, optionally, its binary or install folder.
+func _on_editors_list_item_removed(
+	item_data: LocalEditors.Item, remove_dir: bool, remove_binary: bool
+) -> void:
+	var removal_target := _resolve_removal_target(
+		item_data.path,
+		Config.versions_path.ret() as String,
+		remove_dir,
+		remove_binary,
+	)
 	var removed_editors: Array[LocalEditors.Item] = [item_data]
 	var remove_error := OK
-	var install_dir := LocalEditors.managed_install_dir(item_data.path)
-	if remove_dir and install_dir.is_empty():
+	if remove_dir and removal_target.is_empty():
 		Output.push("skipping removing path {%s}" % item_data.path.get_base_dir())
-	elif remove_dir and DirAccess.dir_exists_absolute(install_dir):
+	elif remove_dir:
 		# Editors registered inside the deleted folder go with it.
 		for editor: LocalEditors.Item in _local_editors.all():
 			var editor_path := ProjectSettings.globalize_path(editor.path)
-			if editor != item_data and LocalEditors.is_path_inside(editor_path, install_dir):
+			if editor != item_data and LocalEditors.is_path_inside(editor_path, removal_target):
 				removed_editors.append(editor)
-		remove_error = edir.remove_recursive(install_dir)
+		remove_error = edir.remove_recursive(removal_target)
 		if remove_error == OK:
-			LocalEditors.remove_empty_parents(install_dir, Config.versions_path.ret() as String)
+			LocalEditors.remove_empty_parents(
+				removal_target, Config.versions_path.ret() as String
+			)
 		else:
-			Output.push("failed removing path {%s}: error %s" % [install_dir, remove_error])
+			Output.push("failed removing path {%s}: error %s" % [removal_target, remove_error])
 			_show_error(
-				tr("Could not delete %s: %s") % [install_dir, error_string(remove_error)]
+				tr("Could not delete %s: %s") % [removal_target, error_string(remove_error)]
+			)
+	elif remove_binary:
+		remove_error = DirAccess.remove_absolute(removal_target)
+		if remove_error != OK:
+			Output.push("failed removing path {%s}: error %s" % [removal_target, remove_error])
+			_show_error(
+				tr("Could not delete %s: %s") % [removal_target, error_string(remove_error)]
 			)
 
 	# After a failed delete the editors stay registered and the rows are rebuilt.
@@ -409,6 +425,29 @@ func _show_error(message: String) -> void:
 	dialog.dialog_text = message
 	add_child(dialog)
 	dialog.popup_centered()
+
+
+## Returns the absolute path to delete, or an empty string when nothing should be
+## removed. The parent folder is only removable when it is a sub-folder of the
+## versions dir, never the versions dir itself, as with same-folder installs.
+static func _resolve_removal_target(
+	editor_path: String,
+	versions_path: String,
+	remove_dir: bool,
+	remove_binary: bool,
+) -> String:
+	if remove_dir:
+		var base_dir := ProjectSettings.globalize_path(editor_path.get_base_dir())
+		var versions_dir := ProjectSettings.globalize_path(versions_path)
+		if not OS.has_feature("linux"):
+			base_dir = base_dir.to_lower()
+			versions_dir = versions_dir.to_lower()
+		if base_dir != versions_dir and base_dir.begins_with(versions_dir):
+			return base_dir
+		return ""
+	if remove_binary:
+		return ProjectSettings.globalize_path(editor_path)
+	return ""
 
 
 ## Persists changes after an editor item edit.

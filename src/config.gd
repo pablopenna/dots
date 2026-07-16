@@ -160,6 +160,24 @@ var allow_install_to_not_empty_dir := ConfigFileValue.new(
 	false
 ): 
 	set(_v): _readonly()
+var only_stable_updates := ConfigFileValue.new(
+	_cfg_auto_save.as_config_like(),
+	"app",
+	"only_stable_updates",
+	true
+):
+	set(_v): _readonly()
+
+
+var extract_to_same_folder := ConfigFileValue.new(
+	_cfg_auto_save.as_config_like(),
+	"app",
+	"extract_to_same_folder",
+	false
+):
+	set(_v): _readonly()
+
+
 var random_project_prefixes := ConfigFileValue.new(
 	_cfg_auto_save.as_config_like(), 
 	"random-project-names", 

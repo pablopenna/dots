@@ -10,8 +10,8 @@ extends HBoxListItem
 #region Properties
 ## Emitted when the item is edited.
 signal edited
-## Emitted when removed.
-signal removed(remove_dir: bool)
+## Emitted when removed, with the parts to delete from the file system.
+signal removed(remove_dir: bool, remove_binary: bool)
 ## Emitted when manage tags is requested.
 signal manage_tags_requested
 ## Emitted when tag clicked.
@@ -378,33 +378,43 @@ func _on_remove(item: LocalEditors.Item) -> void:
 	label.text = tr("Are you sure to remove the editor from the list?")
 
 	var warning := Label.new()
-	var checkbox := CheckBox.new()
-	checkbox.text = tr("remove also from the file system")
+	warning.text = tr("NOTE: the action will remove the parent folder of the editor with all the content.") + "\n%s" % item.path.get_base_dir()
+	warning.self_modulate = get_theme_color("warning_color", "Editor")
+	warning.hide()
+
+	var remove_binary_checkbox := CheckBox.new()
+	remove_binary_checkbox.text = tr("delete binary from filesystem")
+
+	var remove_dir_checkbox := CheckBox.new()
+	remove_dir_checkbox.text = tr("delete parent folder in filesystem")
 	# Only folders inside the versions folder are deleted, see LocalEditorsControl.
 	if LocalEditors.managed_install_dir(item.path).is_empty():
-		checkbox.disabled = true
+		remove_dir_checkbox.disabled = true
 		warning.text = tr(
-			"This editor is outside the Hub's versions folder, so it will only be removed from the list."
+			"This editor is outside the Hub's versions folder, so only its binary can be deleted."
 		)
-	else:
-		warning.text = tr("NOTE: the action will remove the parent folder of the editor with all the content.") + "\n%s" % item.path.get_base_dir()
-		warning.self_modulate = get_theme_color("warning_color", "Editor")
-		warning.hide()
-		checkbox.toggled.connect(func(toggled: bool) -> void:
+		warning.show()
+	remove_dir_checkbox.toggled.connect(func(toggled: bool) -> void:
+		if not remove_dir_checkbox.disabled:
 			warning.visible = toggled
-		)
+		if toggled:
+			remove_binary_checkbox.button_pressed = false
+		remove_binary_checkbox.disabled = toggled
+	)
 
 	var vb := VBoxContainer.new()
 	vb.add_child(label)
-	vb.add_child(checkbox)
+	vb.add_child(remove_binary_checkbox)
+	vb.add_child(remove_dir_checkbox)
 	vb.add_child(warning)
 	vb.add_spacer(false)
 
 	confirmation_dialog.add_child(vb)
 
-	# The list rebuilds the rows, so this one stays until the outcome is known.
+	# The list rebuilds the rows, so this one can free itself once the outcome is known.
 	confirmation_dialog.confirmed.connect(func() -> void:
-		removed.emit(checkbox.button_pressed)
+		queue_free()
+		removed.emit(remove_dir_checkbox.button_pressed, remove_binary_checkbox.button_pressed)
 	)
 	add_child(confirmation_dialog)
 	confirmation_dialog.popup_centered()

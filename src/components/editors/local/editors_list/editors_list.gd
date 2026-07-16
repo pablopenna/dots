@@ -2,9 +2,8 @@ class_name EditorsVBoxList
 extends VBoxList
 ## Editors inventory list with sort, search, and empty state.
 
-
 ## Emitted when an editor row is removed.
-signal item_removed(item_data: LocalEditors.Item, remove_dir: bool)
+signal item_removed(item_data: LocalEditors.Item, remove_dir: bool, remove_binary: bool)
 ## Emitted when an editor row is edited.
 signal item_edited(item_data: LocalEditors.Item)
 ## Emitted when tag management is requested for a row.
@@ -157,8 +156,8 @@ func _post_add(raw_item_data: Object, raw_item_control: Control) -> void:
 	var item_data := raw_item_data as LocalEditors.Item
 	var item_control := raw_item_control as EditorListItemControl
 	item_control.removed.connect(
-		func(remove_dir: bool) -> void:
-			item_removed.emit(item_data, remove_dir)
+		func(remove_dir: bool, remove_binary: bool) -> void:
+			item_removed.emit(item_data, remove_dir, remove_binary)
 	)
 	item_control.edited.connect(
 		func() -> void: item_edited.emit(item_data)
