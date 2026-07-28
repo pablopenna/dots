@@ -12,7 +12,9 @@ env:
 
 jobs:
   export:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: an image roll changed the available wine
+    # packages once already, which silently broke the Windows export.
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
