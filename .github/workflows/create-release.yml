@@ -94,6 +94,10 @@ jobs:
         run: |
           mkdir -p dist
           chmod +x "$LINUX_BINARY" "$LINUX_ARM64_BINARY"
+          # No GodotHub.console.exe here: the Windows presets set
+          # debug/export_console_wrapper=1 ("Debug Only"), so a release export
+          # deliberately produces the GUI exe alone. Shipping a console wrapper
+          # would require changing the presets to value 2.
           zip -9 -q -j dist/GodotHub-Linux.zip "$LINUX_BINARY"
           zip -9 -q -j dist/GodotHub-Linux-arm64.zip "$LINUX_ARM64_BINARY"
           zip -9 -q -j dist/GodotHub-Windows.zip "$WINDOWS_BINARY"
