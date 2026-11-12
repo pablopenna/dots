@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  GODOT_VERSION: "4.5"
+  GODOT_VERSION: "4.7"
   GODOT_RELEASE_TYPE: stable
   RCEDIT_VERSION: v2.0.0
 
@@ -85,7 +85,7 @@ jobs:
           "$HOME/bin/godot" --version
 
           # The .tpz expands to a top-level "templates/" dir; version.txt inside it
-          # holds the exact directory name Godot looks for (e.g. "4.5.stable").
+          # holds the exact directory name Godot looks for (e.g. "4.7.stable").
           unzip -q templates.tpz
           TEMPLATE_VERSION="$(cat templates/version.txt)"
           echo "Export templates version: ${TEMPLATE_VERSION}"
@@ -94,7 +94,7 @@ jobs:
           mv templates "$HOME/.local/share/godot/export_templates/${TEMPLATE_VERSION}"
 
       # rcedit/wine paths live in the editor settings, not in export_presets.cfg.
-      # Godot 4.5 reads editor_settings-4.5.tres (major.minor) -- the widely copied
+      # Godot 4.7 reads editor_settings-4.7.tres (major.minor) -- the widely copied
       # editor_settings-4.tres is silently ignored.
       - name: Configure Godot editor settings
         run: |
