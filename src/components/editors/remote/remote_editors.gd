@@ -1371,6 +1371,11 @@ func _on_job_changed(editor_path: String) -> void:
 		_show_manage_state(_manage_state)
 
 
+## Whether a download's url or file name names a Redot build.
+static func _is_redot_build(value: String) -> bool:
+	return value.to_lower().contains("redot")
+
+
 func download_zip(
 	url: String,
 	file_name: String,
@@ -1379,6 +1384,10 @@ func download_zip(
 ) -> void:
 	var editor_download: AssetDownload = _editor_download_scene.instantiate()
 	_editor_downloads.add_download_item(editor_download)
+	if _is_redot_build(url) or _is_redot_build(file_name):
+		editor_download.icon.texture = EditorEngineBrand.list_icon_texture(
+			EditorEngineBrand.REDOT
+		)
 	var http_terminal := func() -> void:
 		if on_http_terminal.is_valid():
 			on_http_terminal.call()

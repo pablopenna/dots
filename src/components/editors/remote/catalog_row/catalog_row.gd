@@ -142,6 +142,7 @@ static func badge_text(entry: EditorCatalog.CatalogEntry) -> String:
 
 func _update_view() -> void:
 	_name_label.text = _entry.display_name
+	_icon.texture = EditorEngineBrand.list_icon_texture(_entry.brand)
 	var badge := badge_text(_entry)
 	_badge_label.text = badge
 	_badge.visible = not badge.is_empty()
