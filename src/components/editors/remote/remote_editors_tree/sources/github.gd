@@ -8,9 +8,10 @@ class Self extends RemoteEditorsTreeDataSource.I:
 			"suffixes": [
 				"_x11.64.zip", "_linux.64.zip", "_linux.x86_64.zip", "_linux.x86_32.zip",
 				"_linux_x86_64.zip", "_linux_x86_32.zip",
-				# Redot
-				"_linux_x64.zip", "_linux_arm64.zip",
-				"_linux_mono_x64.zip", "_linux_mono_arm64.zip",
+				# Redot. ARM builds are intentionally not listed here so they are
+				# hidden while "any platform" is off, matching Godot's behavior.
+				"_linux_x64.zip",
+				"_linux_mono_x64.zip",
 			],
 		},
 		"OSX": {
