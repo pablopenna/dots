@@ -13,6 +13,7 @@ signal tag_clicked(tag: String)
 
 @onready var _path_label: Label = %PathLabel
 @onready var _title_label: Label = %TitleLabel
+@onready var _icon: TextureRect = $Icon
 @onready var _explore_button: Button = %ExploreButton
 @onready var _favorite_button: TextureButton = %FavoriteButton
 @onready var _tag_container: ItemTagContainer = %TagContainer
@@ -58,6 +59,8 @@ func init(item: LocalEditors.Item) -> void:
 	
 	_title_label.text = item.name
 	_path_label.text = item.path
+	if item.name.to_lower().contains("redot"):
+		_icon.texture = preload("res://assets/Redot128x128.svg")
 	_favorite_button.button_pressed = item.favorite
 	_tag_container.set_tags(item.tags)
 	_tags = item.tags

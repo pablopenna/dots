@@ -74,9 +74,15 @@ func _ready() -> void:
 	_remote_editors_tree.set_data_source(_tree_mirrors[cached_mirror_id])
 
 
+func _is_redot_build(value: String) -> bool:
+	return value.to_lower().contains("redot")
+
+
 func download_zip(url: String, file_name: String) -> void:
 	var editor_download: AssetDownload = _editor_download_scene.instantiate()
 	_editor_downloads.add_download_item(editor_download)
+	if _is_redot_build(url) or _is_redot_build(file_name):
+		editor_download.icon.texture = preload("res://assets/Redot128x128.svg")
 	editor_download.start(
 		url, (Config.DOWNLOADS_PATH.ret() as String) + "/", file_name
 	)

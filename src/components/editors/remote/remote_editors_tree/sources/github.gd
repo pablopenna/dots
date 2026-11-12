@@ -75,22 +75,24 @@ class GithubVersion:
 	var _assets_src: GithubAssetSource
 	
 	func get_flavor_release() -> GodotRelease:
-		return GodotRelease.new(name, flavor, _assets_src)
+		return GodotRelease.new(name, flavor, _assets_src, is_redot)
 	
 	func get_recent_releases() -> Array[GodotRelease]:
 		var result: Array[GodotRelease] = []
 		for r in releases:
-			result.append(GodotRelease.new(name, r, _assets_src))
+			result.append(GodotRelease.new(name, r, _assets_src, is_redot))
 		return result
 
 
 class GodotRelease:
 	var name: String
+	var is_redot: bool
 	var _version: String
 	var _assets_src: GithubAssetSource
 	
-	func _init(version: String, name: String, assets_src: GithubAssetSource) -> void:
+	func _init(version: String, name: String, assets_src: GithubAssetSource, is_redot:=false) -> void:
 		self.name = name
+		self.is_redot = is_redot
 		_assets_src = assets_src
 		_version = version
 	
@@ -159,11 +161,14 @@ class GithubItemBase extends RemoteEditorsTreeDataSource.Item:
 	func _to_filter_target() -> GithubFilterTarget:
 		return null
 	
-	func _asset_to_item(asset: GodotAsset, tree: RemoteEditorsTreeDataSource.RemoteTree) -> void:
+	func _asset_to_item(asset: GodotAsset, tree: RemoteEditorsTreeDataSource.RemoteTree, is_redot:=false) -> void:
 		var tree_item := tree.create_item(_item)
 		tree_item.set_meta("delegate", GithubAssetItem.new(tree_item, _assets, asset))
 		tree_item.set_text(0, asset.name)
-		tree_item.set_icon(0, tree.theme_source.get_theme_icon("Godot", "EditorIcons"))
+		if is_redot:
+			tree_item.set_icon(0, preload("res://assets/Redot128x128.svg") as Texture2D)
+		else:
+			tree_item.set_icon(0, tree.theme_source.get_theme_icon("Godot", "EditorIcons"))
 		var btn_texture: Texture2D = tree.theme_source.get_theme_icon("AssetLib", "EditorIcons")
 		tree_item.add_button(0, btn_texture)
 		tree_item.collapsed = true
@@ -204,7 +209,7 @@ class GithubReleaseItem extends GithubItemBase:
 		_item.set_meta("loaded", true)
 		var assets := await _release.async_load_assets()
 		for asset in assets:
-			_asset_to_item(asset, tree)
+			_asset_to_item(asset, tree, _release.is_redot)
 		tree.free_loading_placeholder(_item)
 
 	func _to_filter_target() -> GithubFilterTarget:
@@ -241,7 +246,7 @@ class GithubVersionItem extends GithubItemBase:
 		if flavor.is_stable():
 			var assets := await flavor.async_load_assets()
 			for asset in assets:
-				_asset_to_item(asset, tree)
+				_asset_to_item(asset, tree, _version.is_redot)
 
 		tree.free_loading_placeholder(_item)
 
