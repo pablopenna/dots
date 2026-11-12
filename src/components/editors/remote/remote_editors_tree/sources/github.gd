@@ -6,21 +6,30 @@ extends RefCounted
 # Endings of desktop editor files, lowercase, per platform. Standard builds use dots
 # ("_linux.x86_64.zip"), .NET builds underscores ("_mono_linux_x86_64.zip"); Godot 3
 # and older say x11 and osx, Godot 4.0 alpha1 to alpha14 "linux.64". Godot 1.0 to 4.x
-# spellings, as published on godot-builds.
+# spellings, as published on godot-builds. Redot mixes dots and underscores and names
+# its CPU "x64", so its own endings follow.
 const _LINUX_X86_64_SUFFIXES: Array[String] = [
 	"_linux.x86_64.zip", "_linux_x86_64.zip", "_x11.64.zip", "_x11_64.zip", "_linux.64.zip",
+	"_linux_x64.zip", "_linux_mono_x64.zip",
 ]
 const _LINUX_X86_32_SUFFIXES: Array[String] = [
 	"_linux.x86_32.zip", "_linux_x86_32.zip", "_x11.32.zip", "_x11_32.zip", "_linux.32.zip",
 ]
-const _LINUX_ARM64_SUFFIXES: Array[String] = ["_linux.arm64.zip", "_linux_arm64.zip"]
+const _LINUX_ARM64_SUFFIXES: Array[String] = [
+	"_linux.arm64.zip", "_linux_arm64.zip", "_linux_mono_arm64.zip",
+]
 const _LINUX_ARM32_SUFFIXES: Array[String] = ["_linux.arm32.zip", "_linux_arm32.zip"]
-const _WINDOWS_X86_64_SUFFIXES: Array[String] = ["_win64.exe.zip", "_win64.zip"]
+const _WINDOWS_X86_64_SUFFIXES: Array[String] = [
+	"_win64.exe.zip", "_win64.zip", "_windows_win64.zip", "_windows_mono_win64.zip",
+]
 const _WINDOWS_X86_32_SUFFIXES: Array[String] = ["_win32.exe.zip", "_win32.zip"]
 const _WINDOWS_ARM64_SUFFIXES: Array[String] = [
 	"_windows_arm64.exe.zip", "_windows_arm64.zip",
 ]
-const _MACOS_UNIVERSAL_SUFFIXES: Array[String] = ["_macos.universal.zip", "_osx.universal.zip"]
+const _MACOS_UNIVERSAL_SUFFIXES: Array[String] = [
+	"_macos.universal.zip", "_osx.universal.zip", "_macos_universal.zip",
+	"_macos_mono_universal.zip",
+]
 ## 64-bit and fat (32 and 64-bit) Intel builds; Apple silicon runs them with Rosetta.
 const _MACOS_INTEL_SUFFIXES: Array[String] = ["_osx.64.zip", "_osx64.zip", "_osx.fat.zip"]
 ## Godot 1.x and 2.0 Mac builds. macOS 10.15 and newer do not run 32-bit apps.
@@ -127,7 +136,7 @@ static func platform_label(os_name: String, arch: String) -> String:
 static func platform_label_for_asset(asset_name: String) -> String:
 	var low := asset_name.to_lower()
 	# Some releases keep replaced builds as "OLD.Godot_v...".
-	if not low.begins_with("godot_v"):
+	if not (low.begins_with("godot_v") or low.begins_with("redot_v")):
 		return ""
 	for word in _NOT_EDITOR_WORDS:
 		if low.contains(word):
@@ -371,6 +380,8 @@ class GithubVersion:
 	var name: String
 	var flavor: String
 	var releases: Array[String] = []
+	## [constant EditorEngineBrand.GODOT] or [constant EditorEngineBrand.REDOT].
+	var brand := EditorEngineBrand.GODOT
 	## Date of the flavor build as written in versions.yml, e.g. "18 August 2026".
 	var release_date: String
 	## godotengine.org path of the flavor build's release notes, e.g. "/article/...".
@@ -615,3 +626,90 @@ class GithubVersionSourceParseYml extends GithubVersionSource:
 				"release_notes": info.release_notes = value
 				"featured": info.featured = value
 		return info
+
+
+## Release files of a GitHub repository whose tags are not "{version}-{release}",
+## e.g. Redot's "redot-{version}-{release}".
+class GithubAssetSourceRepo extends GithubAssetSource:
+	const url = "https://api.github.com/repos/%s/releases/tags/%s"
+
+	var _repo: String
+	var _tag_format: String
+
+	func _init(repo: String, tag_format: String) -> void:
+		_repo = repo
+		_tag_format = tag_format
+
+	func async_load(version: String, release: String) -> Array[GodotAsset]:
+		var tag := _tag_format % [version, release]
+		var response := await HttpClient.async_http_get(
+			url % [_repo, tag],
+			["Accept: application/vnd.github.v3+json"]
+		)
+		var result: Array[GodotAsset] = []
+		var json: Variant = JsonResponseParser.parse_http_response(response)
+		if not json is Dictionary:
+			return result
+		for asset_json: Dictionary in (json as Dictionary).get("assets", []):
+			result.append(GodotAsset.new(asset_json))
+		return result
+
+
+## Reads the Redot engine's GitHub releases, whose tags are "redot-26.3-stable".
+## Redot numbers versions on its own line (26.x) and lists newer releases first.
+class RedotVersionSource extends GithubVersionSource:
+	const REPO := "Redot-Engine/redot-engine"
+	const RELEASES_URL := "https://api.github.com/repos/Redot-Engine/redot-engine/releases"
+	const PER_PAGE := 100
+
+	var _tag_regex := RegEx.create_from_string(
+		"^redot-(?<version>\\d+(?:\\.\\d+)+)-(?<release>.+)$"
+	)
+	var _assets_src := GithubAssetSourceRepo.new(REPO, "redot-%s-%s")
+
+	## The release files source matching [method async_load]'s versions.
+	func asset_source() -> GithubAssetSource:
+		return _assets_src
+
+	func async_load(errors: Array[String] = []) -> Array[GithubVersion]:
+		var result: Array[GithubVersion] = []
+		var versions_by_name: Dictionary[String, GithubVersion] = {}
+		var page := 1
+		while true:
+			var response := await HttpClient.async_http_get(
+				"%s?per_page=%s&page=%s" % [RELEASES_URL, PER_PAGE, page],
+				["Accept: application/vnd.github.v3+json"]
+			)
+			var json: Variant = JsonResponseParser.parse_http_response(response)
+			if not json is Array:
+				if json is Dictionary:
+					errors.append(str((json as Dictionary).get("message", "Redot releases")))
+				break
+			var releases: Array = json
+			for release: Dictionary in releases:
+				var tag_match := _tag_regex.search(str(release.get("tag_name", "")))
+				if tag_match == null:
+					continue
+				var version_name := tag_match.get_string("version")
+				var release_name := tag_match.get_string("release")
+				var version := versions_by_name.get(version_name) as GithubVersion
+				if version == null:
+					version = GithubVersion.new()
+					version._assets_src = _assets_src
+					version.name = version_name
+					version.brand = EditorEngineBrand.REDOT
+					versions_by_name[version_name] = version
+					result.append(version)
+				version.releases.append(release_name)
+			if releases.size() < PER_PAGE:
+				break
+			page += 1
+
+		for version in result:
+			# The flavor sits under the version and must not repeat as a release.
+			if version.releases.has("stable"):
+				version.flavor = "stable"
+			elif not version.releases.is_empty():
+				version.flavor = version.releases[0]
+			version.releases.erase(version.flavor)
+		return result

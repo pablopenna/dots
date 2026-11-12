@@ -3,8 +3,9 @@ extends RefCounted
 ## Guesses human-readable editor names from download and archive file names.
 
 
-static var _version_pattern := _compile_regex(r"godot[-_]?v?(\d+(?:\.\d+)+)")
-static var _channel_pattern := _compile_regex(r"-(pre-alpha|alpha|beta|rc|stable|dev)(\d*)")
+static var _version_pattern := _compile_regex(r"(?:godot|redot)[-_]?v?(\d+(?:\.\d+)+)")
+static var _channel_pattern := _compile_regex(r"-(pre-alpha|alpha|beta|rc|stable|dev)((?:\.\d+|\d+)?)")
+static var _redot_pattern := _compile_regex(r"(^|[^a-z])redot([^a-z]|$)")
 static var _any_version_pattern := _compile_regex(r"(\d+(?:\.\d+)+)")
 static var _mono_pattern := _compile_regex(r"(?:^|[-_.])mono(?:$|[-_.])")
 # An extension starts with a letter, so the dot in "Godot_v4.8-dev6_mono_linux_x86_64" is kept.
@@ -73,10 +74,15 @@ static func _guess_editor_name_from_text(
 		name_suffix = " " + channel
 		if not channel_number.is_empty():
 			name_suffix += channel_number
-	var editor_name := "Godot v%s%s" % [version, name_suffix]
+	var editor_name := "%s v%s%s" % [_engine_label(base_name), version, name_suffix]
 	if _mono_pattern.search(base_name.get_file()) != null:
 		editor_name += " mono"
 	return editor_name
+
+
+## "Redot" for Redot files, "Godot" for everything else.
+static func _engine_label(base_name: String) -> String:
+	return "Redot" if _redot_pattern.search(base_name) != null else "Godot"
 
 
 static func _remove_trailing_extension(file_name: String, extension_pattern: RegEx) -> String:

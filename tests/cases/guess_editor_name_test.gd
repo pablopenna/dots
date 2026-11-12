@@ -35,6 +35,21 @@ func test_guess_name_dev_releases() -> void:
 	])
 
 
+func test_guess_name_redot() -> void:
+	_assert_bulk([
+		["Redot_v26.3-stable_linux_x64.zip",              "Redot v26.3 stable"],
+		["Redot_v26.3-stable_linux_x64",                  "Redot v26.3 stable"],
+		["Redot_v26.3-stable_linux_mono_x64.zip",         "Redot v26.3 stable mono"],
+		["Redot_v26.3-stable_windows_win64.zip",          "Redot v26.3 stable"],
+		["Redot_v26.3-stable_windows_mono_win64.zip",     "Redot v26.3 stable mono"],
+		["Redot_v26.3-stable_macos_universal.zip",        "Redot v26.3 stable"],
+		["Redot_v26.3-stable_macos_mono_universal.zip",   "Redot v26.3 stable mono"],
+		["Redot_v26.3-rc.3_linux_x64.zip",                "Redot v26.3 rc.3"],
+		["Redot_v4.4-beta_linux_x64.zip",                 "Redot v4.4 beta"],
+		["redot-4.3-stable.tar.xz",                       "Redot v4.3 stable"],
+	])
+
+
 func test_guess_name_mono() -> void:
 	_assert_bulk([
 		["Godot_v4.2_mono_win64.exe",                  "Godot v4.2 mono"],

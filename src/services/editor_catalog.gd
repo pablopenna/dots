@@ -46,8 +46,7 @@ const OFFICIAL_MIN_MAJOR := 3
 ## Release files [method async_nearest_available] loads at most per call.
 const MAX_NEAREST_CHECKS := 3
 
-var _version_src: RemoteEditorsTreeDataSourceGithub.GithubVersionSource
-var _asset_src: RemoteEditorsTreeDataSourceGithub.GithubAssetSource
+var _sources: Array[CatalogSource] = []
 ## All entries, newest first.
 var _entries: Array[CatalogEntry] = []
 ## Pre-releases of versions that are stable now, which the tabs leave out: their
@@ -73,33 +72,51 @@ func _init(
 	version_src: RemoteEditorsTreeDataSourceGithub.GithubVersionSource,
 	asset_src: RemoteEditorsTreeDataSourceGithub.GithubAssetSource,
 ) -> void:
-	_version_src = version_src
-	_asset_src = asset_src
+	_sources.append(CatalogSource.new(EditorEngineBrand.GODOT, version_src, asset_src))
 	var host := RemoteEditorsTreeDataSourceGithub.host_platform()
 	use_platform(host["os"], host["arch"])
 
 
-## Returns a catalog that reads versions.yml and release assets from GitHub.
+## Adds the releases of another engine, e.g. Redot, after Godot's. Versions of
+## [param version_src] must report that brand, see [member CatalogEntry.brand].
+func add_source(
+	brand: String,
+	version_src: RemoteEditorsTreeDataSourceGithub.GithubVersionSource,
+	asset_src: RemoteEditorsTreeDataSourceGithub.GithubAssetSource,
+) -> void:
+	_sources.append(CatalogSource.new(brand, version_src, asset_src))
+
+
+## Returns a catalog that reads versions.yml and release assets from GitHub, then
+## Redot's own releases.
 static func default() -> EditorCatalog:
 	var asset_src := RemoteEditorsTreeDataSourceGithub.GithubAssetSourceDefault.new()
-	return EditorCatalog.new(
+	var catalog := EditorCatalog.new(
 		RemoteEditorsTreeDataSourceGithub.GithubVersionSourceParseYml.new(
 			RemoteEditorsTreeDataSourceGithub.YmlSourceGithub.new(), asset_src
 		),
 		asset_src,
 	)
+	var redot_src := RemoteEditorsTreeDataSourceGithub.RedotVersionSource.new()
+	catalog.add_source(EditorEngineBrand.REDOT, redot_src, redot_src.asset_source())
+	return catalog
 
 
 ## Fetches the version list and replaces the entries. Fetch errors go to [param errors].
 func async_load(errors: Array[String] = []) -> void:
-	@warning_ignore("redundant_await")
-	var versions := await _version_src.async_load(errors)
 	var loaded: Array[CatalogEntry] = []
 	var unlisted: Array[CatalogEntry] = []
-	for version in versions:
-		loaded.append_array(_entries_of(version))
-		unlisted.append_array(_prereleases_of_stable(version))
+	for source in _sources:
+		@warning_ignore("redundant_await")
+		var versions := await source.version_src.async_load(errors)
+		for version in versions:
+			version.brand = source.brand
+			loaded.append_array(_entries_of(version))
+			unlisted.append_array(_prereleases_of_stable(version))
 	loaded.sort_custom(func(a: CatalogEntry, b: CatalogEntry) -> bool:
+		if a.brand != b.brand:
+			# Keep each engine together, Godot first.
+			return a.brand == EditorEngineBrand.GODOT
 		return a.sort_key > b.sort_key
 	)
 	_entries = loaded
@@ -179,9 +196,9 @@ func async_variants(entry: CatalogEntry, errors: Array[String] = []) -> Array[Ca
 ## files. A refresh ([method async_load]) forgets it, and
 ## [method forget_no_editor_builds] forgets NO_EDITOR_BUILDS.
 func entry_availability(entry: CatalogEntry) -> Availability:
-	var tag := entry.tag()
-	if _availability_by_tag.has(tag):
-		return _availability_by_tag[tag]
+	var key := _cache_key(entry)
+	if _availability_by_tag.has(key):
+		return _availability_by_tag[key]
 	return Availability.UNKNOWN
 
 
@@ -191,7 +208,7 @@ func entry_availability(entry: CatalogEntry) -> Availability:
 func forget_no_editor_builds() -> void:
 	for entry in _entries:
 		if entry_availability(entry) == Availability.NO_EDITOR_BUILDS:
-			_availability_by_tag.erase(entry.tag())
+			_availability_by_tag.erase(_cache_key(entry))
 			availability_changed.emit(entry)
 
 
@@ -209,7 +226,11 @@ func async_nearest_available(
 	if _platform_suffixes.is_empty():
 		return null
 	var newer := entry_availability(entry) == Availability.NOT_FOR_PLATFORM
-	var candidates := entries(tab)
+	# Another engine's builds are not alternatives for this one.
+	var candidates: Array[CatalogEntry] = []
+	candidates.assign(entries(tab).filter(
+		func(candidate: CatalogEntry) -> bool: return candidate.brand == entry.brand
+	))
 	if newer:
 		# Entries are newest first.
 		candidates.reverse()
@@ -238,16 +259,34 @@ func async_nearest_available(
 
 
 ## Returns true when a local Godot editor has the version and release of [param entry].
-## Standard and .NET builds count the same.
+## Standard and .NET builds count the same, but Godot and Redot do not.
 func is_installed(entry: CatalogEntry, editors: Array[LocalEditors.Item]) -> bool:
 	var hint := entry.tag()
 	for editor in editors:
-		# Redot shares Godot's version numbers but is another engine.
-		if editor.engine_brand == EditorEngineBrand.REDOT:
+		if editor.engine_brand != entry.brand:
 			continue
 		if VersionHint.are_equal(hint, editor.version_hint, true):
 			return true
 	return false
+
+
+## Cache key of an entry: its tag is not unique across engines, as Redot may
+## share a Godot version number.
+static func _cache_key(entry: CatalogEntry) -> String:
+	return "%s|%s" % [entry.brand, entry.tag()]
+
+
+## Name of the engine of [param brand] as shown in the list.
+static func _brand_label(brand: String) -> String:
+	return "Redot" if brand == EditorEngineBrand.REDOT else "Godot"
+
+
+## Release files source of [param brand], else Godot's.
+func _asset_source_for(brand: String) -> RemoteEditorsTreeDataSourceGithub.GithubAssetSource:
+	for source in _sources:
+		if source.brand == brand:
+			return source.asset_src
+	return _sources[0].asset_src
 
 
 func _entries_of(version: RemoteEditorsTreeDataSourceGithub.GithubVersion) -> Array[CatalogEntry]:
@@ -284,13 +323,15 @@ func _entry(
 ) -> CatalogEntry:
 	var info := version.get_release_info(release)
 	var entry := CatalogEntry.new()
+	entry.brand = version.brand
 	entry.version = version.name
 	entry.release = release
 	entry.channel = _channel_of(release)
+	var engine := _brand_label(version.brand)
 	if entry.is_stable():
-		entry.display_name = "Godot %s" % version.name
+		entry.display_name = "%s %s" % [engine, version.name]
 	else:
-		entry.display_name = "Godot %s %s" % [version.name, release]
+		entry.display_name = "%s %s %s" % [engine, version.name, release]
 	entry.release_date = info.release_date
 	entry.release_notes_url = _absolute_url(info.release_notes)
 	# Set per major on stable versions; pre-releases are never featured.
@@ -323,35 +364,37 @@ func _newest_patch_per_branch() -> Array[CatalogEntry]:
 		if parts[0] < OFFICIAL_MIN_MAJOR:
 			continue
 		var branch := "%d.%d" % [parts[0], parts[1] if parts.size() > 1 else 0]
-		if branch in seen_branches:
+		# Godot and Redot may share a branch, but not its patches.
+		var branch_key := "%s|%s" % [entry.brand, branch]
+		if branch_key in seen_branches:
 			continue
-		seen_branches.append(branch)
+		seen_branches.append(branch_key)
 		result.append(entry)
 	return result
 
 
 func _async_assets(entry: CatalogEntry) -> Array[RemoteEditorsTreeDataSourceGithub.GodotAsset]:
-	var tag := entry.tag()
+	var key := _cache_key(entry)
 	var result: Array[RemoteEditorsTreeDataSourceGithub.GodotAsset] = []
-	if _assets_by_tag.has(tag):
-		result.assign(_assets_by_tag[tag])
+	if _assets_by_tag.has(key):
+		result.assign(_assets_by_tag[key])
 		return result
 	# One request for callers asking at the same time, e.g. two searches.
-	if _requests_by_tag.has(tag):
-		var running := _requests_by_tag[tag]
+	if _requests_by_tag.has(key):
+		var running := _requests_by_tag[key]
 		await running.finished
 		result.assign(running.assets)
 		return result
 	var request := AssetsRequest.new()
-	_requests_by_tag[tag] = request
+	_requests_by_tag[key] = request
 	var generation := _cache_generation
 	@warning_ignore("redundant_await")
-	result = await _asset_src.async_load(entry.version, entry.release)
-	_requests_by_tag.erase(tag)
+	result = await _asset_source_for(entry.brand).async_load(entry.version, entry.release)
+	_requests_by_tag.erase(key)
 	# Empty may mean a network error, and editors of a release without any may be
 	# published any time: fetch those again next time.
 	if _has_editor_builds(result) and generation == _cache_generation:
-		_assets_by_tag[tag] = result
+		_assets_by_tag[key] = result
 	request.assets = result
 	request.finished.emit()
 	return result
@@ -366,7 +409,7 @@ func _clear_release_cache() -> void:
 func _set_availability(entry: CatalogEntry, availability: Availability) -> void:
 	if entry_availability(entry) == availability:
 		return
-	_availability_by_tag[entry.tag()] = availability
+	_availability_by_tag[_cache_key(entry)] = availability
 	availability_changed.emit(entry)
 
 
@@ -473,6 +516,8 @@ static func _sort_key(version_name: String, order: int) -> int:
 ## One installable build, e.g. Godot 4.7.2 or Godot 4.8 dev7.
 class CatalogEntry:
 	var version: String
+	## [constant EditorEngineBrand.GODOT] or [constant EditorEngineBrand.REDOT].
+	var brand := EditorEngineBrand.GODOT
 	## "stable", "dev7", "rc1", ...
 	var release: String
 	## "Godot 4.7.2" or "Godot 4.8 dev7".
@@ -525,3 +570,19 @@ class AssetsRequest:
 
 	## The files loaded, empty when the request failed.
 	var assets: Array[RemoteEditorsTreeDataSourceGithub.GodotAsset] = []
+
+
+## The version list and release files of one engine.
+class CatalogSource:
+	var brand: String
+	var version_src: RemoteEditorsTreeDataSourceGithub.GithubVersionSource
+	var asset_src: RemoteEditorsTreeDataSourceGithub.GithubAssetSource
+
+	func _init(
+		p_brand: String,
+		p_version_src: RemoteEditorsTreeDataSourceGithub.GithubVersionSource,
+		p_asset_src: RemoteEditorsTreeDataSourceGithub.GithubAssetSource,
+	) -> void:
+		brand = p_brand
+		version_src = p_version_src
+		asset_src = p_asset_src
