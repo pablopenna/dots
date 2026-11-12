@@ -183,6 +183,7 @@ func _delegate_of(item: TreeItem) -> RemoteEditorsTreeDataSource.Item:
 
 
 func _setup_tree() -> void:
+	_tree.add_theme_constant_override("icon_max_width", int(16 * Config.EDSCALE))
 	_i_remote_tree = RemoteEditorsTreeDataSource.RemoteTree.new(_tree, self)
 	
 	_tree.item_collapsed.connect(
