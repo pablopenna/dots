@@ -169,7 +169,10 @@ func _setup_checkboxes() -> void:
 		inverted_checkbox.call(
 			tr("x.x"), 
 			RowFilter.new(func(row: RemoteEditorsTreeDataSource.FilterTarget) -> bool: 
-				return row.is_possible_version_folder() and not (row.get_name().begins_with("4") or row.get_name().begins_with("3"))),
+				# Redot uses its own versioning (e.g. 26.x) and is always shown here.
+				return row.is_possible_version_folder() \
+					and not row.is_redot() \
+					and not (row.get_name().begins_with("4") or row.get_name().begins_with("3"))),
 			_remote_editors_checkbox_checked.get_value("x.x", false)
 		) as CheckBox
 	)

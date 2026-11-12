@@ -141,6 +141,7 @@ class Item extends Object:
 			"version_hint", 
 			self.name.to_lower()
 				.replace("godot", "")
+				.replace("redot", "")
 				.strip_edges()
 				.replace(" ", "-")
 		)

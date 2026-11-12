@@ -145,26 +145,29 @@ func _scan_editors(dir_to_scan: String) -> void:
 	var filter: Callable
 	if OS.has_feature("windows"):
 		filter = func(x: edir.DirListResult) -> bool:
+			var lower_file := x.file.to_lower()
 			var evidences := [
 				x.is_file and x.extension == "exe",
-				x.file.to_lower().contains("godot_v"),
-				not x.file.to_lower().contains("console"),
+				lower_file.contains("godot_v") or lower_file.contains("redot_v"),
+				not lower_file.contains("console"),
 			]
 			return evidences.all(func(is_true: bool) -> bool: return is_true)
 	elif OS.has_feature("macos"):
 		filter = func(x: edir.DirListResult) -> bool:
+			var lower_file := x.file.to_lower()
 			var evidences := [
 				x.is_dir and x.extension == "app",
-				x.file.to_lower().contains("godot")
+				lower_file.contains("godot") or lower_file.contains("redot")
 			]
 			return evidences.all(func(is_true: bool) -> bool: return is_true)
 	elif OS.has_feature("linux"):
 		filter = func(x: edir.DirListResult) -> bool:
+			var lower_file := x.file.to_lower()
 			var evidences := [
 				x.is_file and (
 					x.extension.contains("32") or x.extension.contains("64")
 				),
-				x.file.to_lower().contains("godot_v")
+				lower_file.contains("godot_v") or lower_file.contains("redot_v")
 			]
 			return evidences.all(func(is_true: bool) -> bool: return is_true)
 

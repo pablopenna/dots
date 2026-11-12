@@ -39,6 +39,9 @@ class FilterTarget:
 	func is_file() -> bool:
 		return false
 	
+	func is_redot() -> bool:
+		return false
+
 	func is_for_different_platform(platform_suffixes: Array) -> bool:
 		return false
 	

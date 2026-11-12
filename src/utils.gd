@@ -6,12 +6,18 @@ static func guess_editor_name(file_name: String) -> String:
 
 	var lower := base.to_lower()
 
+	var engine := "Godot"
+	var re_engine := RegEx.new()
+	re_engine.compile(r"(^|[^a-z])redot([^a-z]|$)")
+	if re_engine.search(lower):
+		engine = "Redot"
+
 	# Allow versions like 4.1, 4.1.1, 4.1.1.1, etc.
 	var re_version := RegEx.new()
-	re_version.compile(r"godot[-_]?v?(\d+(?:\.\d+)+)") 
+	re_version.compile(r"(?:godot|redot)[-_]?v?(\d+(?:\.\d+)+)")
 
 	var re_channel := RegEx.new()
-	re_channel.compile(r"-(pre-alpha|alpha|beta|rc|stable|dev)(\d*)")
+	re_channel.compile(r"-(pre-alpha|alpha|beta|rc|stable|dev)((?:\.\d+|\d+)?)")
 
 	var version := ""
 	var channel := ""
@@ -46,7 +52,7 @@ static func guess_editor_name(file_name: String) -> String:
 		if channel_num != "":
 			suffix += channel_num
 
-	var name := "Godot v%s%s" % [version, suffix]
+	var name := "%s v%s%s" % [engine, version, suffix]
 	if mono:
 		name += " mono"
 

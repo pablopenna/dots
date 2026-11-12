@@ -5,13 +5,27 @@ class Self extends RemoteEditorsTreeDataSource.I:
 	var _assets: RemoteEditorsTreeDataSource.RemoteAssets
 	const platforms = {
 		"X11": {
-			"suffixes": ["_x11.64.zip", "_linux.64.zip", "_linux.x86_64.zip", "_linux.x86_32.zip", "_linux_x86_64.zip", "_linux_x86_32.zip"],
+			"suffixes": [
+				"_x11.64.zip", "_linux.64.zip", "_linux.x86_64.zip", "_linux.x86_32.zip",
+				"_linux_x86_64.zip", "_linux_x86_32.zip",
+				# Redot
+				"_linux_x64.zip", "_linux_arm64.zip",
+				"_linux_mono_x64.zip", "_linux_mono_arm64.zip",
+			],
 		},
 		"OSX": {
-			"suffixes": ["_osx.universal.zip", "_macos.universal.zip", "_osx.fat.zip", "_osx32.zip", "_osx64.zip"],
+			"suffixes": [
+				"_osx.universal.zip", "_macos.universal.zip", "_osx.fat.zip", "_osx32.zip", "_osx64.zip",
+				# Redot
+				"_macos_universal.zip", "_macos_mono_universal.zip",
+			],
 		},
 		"Windows": {
-			"suffixes": ["_win64.exe.zip", "_win32.exe.zip", "_win64.zip", "_win32.zip"],
+			"suffixes": [
+				"_win64.exe.zip", "_win32.exe.zip", "_win64.zip", "_win32.zip",
+				# Redot
+				"_windows_win64.zip", "_windows_mono_win64.zip",
+			],
 		}
 	}
 	
@@ -20,15 +34,19 @@ class Self extends RemoteEditorsTreeDataSource.I:
 	
 	func setup(tree: Tree) -> void:
 		var root := tree.create_item()
+		var godot_source := GithubVersionSourceParseYml.new(
+			YmlSourceGithub.new(),
+			GithubAssetSourceDefault.new()
+		)
 		root.set_meta(
 			"delegate", 
-			GithubRootItem.new(
-				root, 
+			GithubRootsItem.new(
+				root,
 				_assets,
-				GithubVersionSourceParseYml.new(
-					YmlSourceGithub.new(),
-					GithubAssetSourceDefault.new()
-				),
+				[
+					GithubRoot.new("Godot", godot_source),
+					GithubRoot.new("Redot", RedotVersionSource.new()),
+				],
 			)
 		)
 	
@@ -53,6 +71,7 @@ class GithubVersion:
 	var name: String
 	var flavor: String
 	var releases: Array[String] = []
+	var is_redot := false
 	var _assets_src: GithubAssetSource
 	
 	func get_flavor_release() -> GodotRelease:
@@ -227,7 +246,36 @@ class GithubVersionItem extends GithubItemBase:
 		tree.free_loading_placeholder(_item)
 
 	func _to_filter_target() -> GithubFilterTarget:
-		return GithubFilterTarget.new(_version.name, true, false, false)
+		return GithubFilterTarget.new(_version.name, true, false, false, _version.is_redot)
+
+
+class GithubRoot:
+	var name: String
+	var versions_source: GithubVersionSource
+
+	func _init(name: String, versions_source: GithubVersionSource) -> void:
+		self.name = name
+		self.versions_source = versions_source
+
+
+class GithubRootsItem extends GithubItemBase:
+	var _roots: Array[GithubRoot]
+
+	func _init(item: TreeItem, assets: RemoteEditorsTreeDataSource.RemoteAssets, roots: Array[GithubRoot]) -> void:
+		super._init(item, assets)
+		_roots = roots
+
+	func async_expand(tree: RemoteEditorsTreeDataSource.RemoteTree) -> void:
+		_item.set_meta("loaded", true)
+		for root in _roots:
+			var tree_item := tree.create_item(_item)
+			tree.set_as_folder(tree_item)
+			tree_item.set_text(0, root.name)
+			var root_item := GithubRootItem.new(tree_item, _assets, root.versions_source)
+			tree_item.set_meta("delegate", root_item)
+			await root_item.async_expand(tree)
+			tree_item.collapsed = false
+		tree.free_loading_placeholder(_item)
 
 
 class GithubRootItem extends GithubItemBase:
@@ -254,12 +302,14 @@ class GithubFilterTarget extends RemoteEditorsTreeDataSource.FilterTarget:
 	var _is_possible_version_folder: bool
 	var _is_file: bool
 	var _is_zip: bool
+	var _is_redot: bool
 
-	func _init(name: String, is_possible_version_folder: bool, is_file: bool, is_zip: bool) -> void:
+	func _init(name: String, is_possible_version_folder: bool, is_file: bool, is_zip: bool, is_redot:=false) -> void:
 		_name = name
 		_is_possible_version_folder = is_possible_version_folder
 		_is_file = is_file
 		_is_zip = is_zip
+		_is_redot = is_redot
 
 	func is_possible_version_folder() -> bool:
 		return _is_possible_version_folder
@@ -269,6 +319,9 @@ class GithubFilterTarget extends RemoteEditorsTreeDataSource.FilterTarget:
 
 	func is_zip() -> bool:
 		return _is_zip
+
+	func is_redot() -> bool:
+		return _is_redot
 
 	func is_for_different_platform(platform_suffixes: Array) -> bool:
 		var cached_name := get_name()
@@ -302,6 +355,34 @@ class GithubAssetSourceDefault extends GithubAssetSource:
 		)
 		var result: Array[GodotAsset] = []
 		for asset_json: Dictionary in json.get('assets', []):
+			result.append(GodotAsset.new(asset_json))
+		return result
+
+
+class GithubAssetSourceRepo extends GithubAssetSource:
+	const url = "https://api.github.com/repos/%s/releases/tags/%s"
+
+	var _repo: String
+	var _tag_format: String
+
+	func _init(repo: String, tag_format: String) -> void:
+		_repo = repo
+		_tag_format = tag_format
+
+	func async_load(version: String, release: String) -> Array[GodotAsset]:
+		var tag := _tag_format % [version, release]
+		var response := await HttpClient.async_http_get(
+			url % [_repo, tag],
+			["Accept: application/vnd.github.v3+json"]
+		)
+		var json: Variant = utils.parse_json_safe(
+			(response[3] as PackedByteArray).get_string_from_utf8()
+		)
+		var result: Array[GodotAsset] = []
+		if not json is Dictionary:
+			return result
+		var json_dict := json as Dictionary
+		for asset_json: Dictionary in json_dict.get('assets', []):
 			result.append(GodotAsset.new(asset_json))
 		return result
 
@@ -367,6 +448,59 @@ class YmlSourceGithub extends YmlSource:
 			errors.append(info.error_text)
 		var text := response.get_string_from_utf8()
 		return text
+
+
+class RedotVersionSource extends GithubVersionSource:
+	const REPO = "Redot-Engine/redot-engine"
+	const RELEASES_URL = "https://api.github.com/repos/Redot-Engine/redot-engine/releases"
+	const PER_PAGE = 100
+
+	var _tag_regex := RegEx.create_from_string("^redot-(?<version>\\d+(?:\\.\\d+)+)-(?<release>.+)$")
+	var _assets_src := GithubAssetSourceRepo.new(REPO, "redot-%s-%s")
+
+	func async_load() -> Array[GithubVersion]:
+		var result: Array[GithubVersion] = []
+		var versions_by_name: Dictionary[String, GithubVersion] = {}
+		var page := 1
+		while true:
+			var response := await HttpClient.async_http_get(
+				"%s?per_page=%s&page=%s" % [RELEASES_URL, PER_PAGE, page],
+				["Accept: application/vnd.github.v3+json"]
+			)
+			var json: Variant = utils.parse_json_safe(
+				(response[3] as PackedByteArray).get_string_from_utf8()
+			)
+			if not json is Array:
+				break
+			var releases: Array = json
+			for release: Dictionary in releases:
+				var tag_match := _tag_regex.search(str(release.get("tag_name", "")))
+				if tag_match == null:
+					continue
+				var version_name := tag_match.get_string("version")
+				var release_name := tag_match.get_string("release")
+				var version := versions_by_name.get(version_name) as GithubVersion
+				if version == null:
+					version = GithubVersion.new()
+					version._assets_src = _assets_src
+					version.name = version_name
+					version.is_redot = true
+					versions_by_name[version_name] = version
+					result.append(version)
+				version.releases.append(release_name)
+			if releases.size() < PER_PAGE:
+				break
+			page += 1
+
+		for version in result:
+			# The flavor is shown directly under the version node and must not
+			# be duplicated as a separate release folder.
+			if version.releases.has("stable"):
+				version.flavor = "stable"
+			elif not version.releases.is_empty():
+				version.flavor = version.releases[0]
+			version.releases.erase(version.flavor)
+		return result
 
 
 class GithubVersionSourceParseYml extends GithubVersionSource:
