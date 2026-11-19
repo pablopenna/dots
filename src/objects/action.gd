@@ -50,19 +50,19 @@ class Self:
 	
 	var key: String:
 		get: return _key
-		set(_v): utils.prop_is_readonly()
+		set(_v): ObjectHelpers.reject_read_only_property_assignment()
 	
 	var label: String:
 		get: return _label
-		set(_v): utils.prop_is_readonly()
+		set(_v): ObjectHelpers.reject_read_only_property_assignment()
 
 	var tooltip: String:
 		get: return _tooltip
-		set(_v): utils.prop_is_readonly()
+		set(_v): ObjectHelpers.reject_read_only_property_assignment()
 
 	var icon: Icon:
 		get: return _icon
-		set(_v): utils.prop_is_readonly()
+		set(_v): ObjectHelpers.reject_read_only_property_assignment()
 	
 	var _key: String
 	var _label: String
@@ -95,7 +95,7 @@ class Self:
 
 class Icon:
 	func texture() -> Texture2D:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 
 
 class IconTheme extends Icon:

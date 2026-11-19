@@ -486,7 +486,7 @@ class GithubAssetSourceDefault extends GithubAssetSource:
 		var response := await _async_http_get(url % tag)
 		var result: Array[GodotAsset] = []
 		# Failed requests have an empty body; treat anything but an object as no assets.
-		var json: Variant = utils.response_to_json(response)
+		var json: Variant = JsonResponseParser.parse_http_response(response)
 		if not json is Dictionary:
 			return result
 		for asset_json: Dictionary in (json as Dictionary).get('assets', []):

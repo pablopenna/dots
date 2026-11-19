@@ -56,7 +56,7 @@ func _ready() -> void:
 				error(tr("Error. Code: %s" % err))
 			return
 
-		var project_configs := utils.find_project_godot_files(project_dir)
+		var project_configs := ProjectFileFinder.find_project_godot_files(project_dir)
 		if len(project_configs) == 0:
 			if is_same_dialog:
 				error(tr("No project.godot found."))

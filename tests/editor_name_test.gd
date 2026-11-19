@@ -27,21 +27,21 @@ func _ready() -> void:
 # The full guess_editor_name matrix is in tests/cases/guess_editor_name_test.gd.
 func _test_guess_download_names() -> void:
 	# remote_editors.gd strips ".zip" before guessing.
-	_check_equal(utils.guess_editor_name("Godot_v4.8-dev6_linux.x86_64"), "Godot v4.8 dev6")
+	_check_equal(EditorNameGuesser.guess_editor_name("Godot_v4.8-dev6_linux.x86_64"), "Godot v4.8 dev6")
 	_check_equal(
-		utils.guess_editor_name("Godot_v4.8-dev6_mono_linux_x86_64"), "Godot v4.8 dev6 mono"
+		EditorNameGuesser.guess_editor_name("Godot_v4.8-dev6_mono_linux_x86_64"), "Godot v4.8 dev6 mono"
 	)
 
 
 func _test_legacy_guess_is_frozen() -> void:
 	# These are the names older releases stored in editors.cfg.
-	_check_equal(utils.legacy_guess_editor_name("Godot_v4.8-dev6_linux.x86_64"), "Godot v4.8")
-	_check_equal(utils.legacy_guess_editor_name("Godot_v4.8-dev6_mono_linux_x86_64"), "Godot_v4")
+	_check_equal(EditorNameGuesser.legacy_guess_editor_name("Godot_v4.8-dev6_linux.x86_64"), "Godot v4.8")
+	_check_equal(EditorNameGuesser.legacy_guess_editor_name("Godot_v4.8-dev6_mono_linux_x86_64"), "Godot_v4")
 	_check_equal(
-		utils.legacy_guess_editor_name("Godot_v4.7.2-stable_mono_linux_x86_64"), "Godot v4.7"
+		EditorNameGuesser.legacy_guess_editor_name("Godot_v4.7.2-stable_mono_linux_x86_64"), "Godot v4.7"
 	)
 	_check_equal(
-		utils.legacy_guess_editor_name("/home/user/Downloads/Godot_v4.8-dev6_mono_linux_x86_64"),
+		EditorNameGuesser.legacy_guess_editor_name("/home/user/Downloads/Godot_v4.8-dev6_mono_linux_x86_64"),
 		"/home/user/Downloads/Godot_v4",
 	)
 

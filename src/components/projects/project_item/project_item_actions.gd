@@ -108,7 +108,7 @@ class Menu extends MenuButton:
 		popup.id_pressed.connect(func(id: int) -> void:
 			((popup.get_item_metadata(
 				popup.get_item_index(id)
-			) as Dictionary).get('on_pressed', utils.empty_func) as Callable).call()
+			) as Dictionary).get('on_pressed', ObjectHelpers.do_nothing) as Callable).call()
 		)
 		
 		_settings_popup = PopupMenu.new()
@@ -117,7 +117,7 @@ class Menu extends MenuButton:
 		_settings_popup.id_pressed.connect(func(id: int) -> void:
 			((_settings_popup.get_item_metadata(
 				_settings_popup.get_item_index(id)
-			) as Dictionary).get('on_pressed', utils.empty_func) as Callable).call()
+			) as Dictionary).get('on_pressed', ObjectHelpers.do_nothing) as Callable).call()
 		)
 		popup.add_child(_settings_popup)
 

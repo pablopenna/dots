@@ -191,7 +191,7 @@ class Item:
 
 
 	func before_delete_as_ref_counted() -> void:
-		utils.disconnect_all(self)
+		ObjectHelpers.disconnect_all_signals(self)
 		if _external_project_info:
 			_external_project_info.before_delete_as_ref_counted()
 
@@ -407,7 +407,7 @@ class ExternalProjectInfo extends RefCounted:
 
 
 	func before_delete_as_ref_counted() -> void:
-		utils.disconnect_all(self)
+		ObjectHelpers.disconnect_all_signals(self)
 
 
 	func load(with_icon := true) -> void:

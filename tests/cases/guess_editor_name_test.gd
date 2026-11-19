@@ -120,7 +120,7 @@ func test_guess_name_zip_basenames_without_extension() -> void:
 	]
 	_assert_bulk(cases)
 	for c: Array in cases:
-		assert_str(utils.guess_editor_name(c[0] as String)).is_not_equal("Godot_v4")
+		assert_str(EditorNameGuesser.guess_editor_name(c[0] as String)).is_not_equal("Godot_v4")
 
 
 func test_guess_name_from_downloaded_zip_filename() -> void:
@@ -219,7 +219,7 @@ func test_guess_name_misc() -> void:
 
 
 func _assert_name(file_name: String, expected: String) -> void:
-	assert_str(utils.guess_editor_name(file_name)).is_equal(expected)
+	assert_str(EditorNameGuesser.guess_editor_name(file_name)).is_equal(expected)
 
 
 func _assert_bulk(cases: Array) -> void:

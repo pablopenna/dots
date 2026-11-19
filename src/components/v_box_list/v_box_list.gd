@@ -85,7 +85,7 @@ func sort_items() -> void:
 
 
 func _item_comparator(a: Dictionary, b: Dictionary) -> bool:
-	return utils.not_implemeted()
+	return ObjectHelpers.not_implemented()
 
 
 func _fill_sort_options(btn: OptionButton) -> void:

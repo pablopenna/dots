@@ -31,12 +31,12 @@ func _ready() -> void:
 	_browse_button.icon = get_theme_icon("Load", "EditorIcons")
 	_file_dialog.file_selected.connect(func(dir: String) -> void:
 		_path_edit.text = dir
-		_name_edit.text = utils.guess_editor_name(dir)
+		_name_edit.text = EditorNameGuesser.guess_editor_name(dir)
 		_update_ok_button()
 	)
 	_file_dialog.dir_selected.connect(func(path: String) -> void:
 		_path_edit.text = path
-		_name_edit.text = utils.guess_editor_name(path)
+		_name_edit.text = EditorNameGuesser.guess_editor_name(path)
 	)
 	_name_edit.text_changed.connect(func(_arg: String) -> void: _update_ok_button())
 	_path_edit.text_changed.connect(func(_arg: String) -> void: _update_ok_button())

@@ -100,10 +100,10 @@ func _ready() -> void:
 				_remote_editors.install_zip(
 					file, 
 					file.get_file().replace(".zip", ""), 
-					utils.guess_editor_name(file.get_file().replace(".zip", ""))
+					EditorNameGuesser.guess_editor_name(file.get_file().replace(".zip", ""))
 				)
 		else:
-			_local_editors.import(utils.guess_editor_name(file), file)
+			_local_editors.import(EditorNameGuesser.guess_editor_name(file), file)
 	)
 	
 	# Sidebar navigation buttons

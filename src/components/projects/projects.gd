@@ -217,7 +217,7 @@ func _on_install_zip_confirmed(_final_project_name: String, project_dir: String)
 		_install_project_from_zip_dialog.error(tr("Failed to unzip."))
 		return
 	_close_pending_install_zip()
-	var project_configs := utils.find_project_godot_files(project_dir)
+	var project_configs := ProjectFileFinder.find_project_godot_files(project_dir)
 	if len(project_configs) == 0:
 		_install_project_from_zip_dialog.error(tr("No project.godot found."))
 		return
@@ -234,7 +234,7 @@ func _close_pending_install_zip() -> void:
 
 
 func _scan_projects(dir_path: String) -> void:
-	var project_configs := utils.find_project_godot_files(dir_path)
+	var project_configs := ProjectFileFinder.find_project_godot_files(dir_path)
 	var added_projects: Array[Projects.Item] = []
 	for project_config: edir.DirListResult in project_configs:
 		var project_path := project_config.path

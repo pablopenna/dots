@@ -399,7 +399,7 @@ func next_random_project_name() -> String:
 
 
 func _readonly() -> void:
-	utils.prop_is_readonly()
+	ObjectHelpers.reject_read_only_property_assignment()
 
 
 func _simplify_path(s: String) -> String:

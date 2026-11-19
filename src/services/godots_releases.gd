@@ -68,15 +68,15 @@ class Default extends I:
 
 class Src:
 	func async_all() -> Array:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 
 	## return is Optional[Dictionary]
 	func async_latest() -> Variant:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 	
 	## return is Optional[Dictionary]
 	func async_recent() -> Variant:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 
 
 class SrcFileSystem extends Src:

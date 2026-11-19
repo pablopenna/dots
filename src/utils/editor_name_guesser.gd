@@ -1,6 +1,6 @@
-class_name utils
+class_name EditorNameGuesser
 extends RefCounted
-## Provides utils.
+## Guesses human-readable editor names from download and archive file names.
 
 
 static var _version_pattern := _compile_regex(r"godot[-_]?v?(\d+(?:\.\d+)+)")
@@ -37,13 +37,6 @@ static func guess_editor_name(file_name: String) -> String:
 ## [method guess_editor_name] for versioned files.
 static func names_version(editor_name: String) -> bool:
 	return _any_version_pattern.search(editor_name) != null
-
-
-## Whether [param editor_name] has a version, like the names [method guess_editor_name]
-## guesses from versioned file names ("Godot v4.7.2 stable"), unlike its fallback to
-## the file name itself.
-static func names_version(editor_name: String) -> bool:
-	return _re_any_ver.search(editor_name) != null
 
 
 ## Guesses a name the way older releases did. They missed "dev" builds and cut
@@ -91,68 +84,3 @@ static func _remove_trailing_extension(file_name: String, extension_pattern: Reg
 	if extension_match:
 		return file_name.substr(0, extension_match.get_start())
 	return file_name
-
-
-static func find_project_godot_files(dir_path: String) -> Array[edir.DirListResult]:
-	var project_configs := edir.list_recursive(
-		ProjectSettings.globalize_path(dir_path), 
-		false,
-		(func(x: edir.DirListResult) -> bool: 
-			return x.is_file and x.file == "project.godot"),
-		(func(x: String) -> bool: 
-			return not x.get_file().begins_with("."))
-	)
-	return project_configs
-
-
-static func response_to_json(response: Variant, safe:=true) -> Variant:
-	var body := response[3] as PackedByteArray
-	var string := body.get_string_from_utf8()
-	if safe:
-		return parse_json_safe(string)
-	else:
-		return JSON.parse_string(string)
-
-
-static func parse_json_safe(string: String) -> Variant:
-	var json := JSON.new()
-	var err := json.parse(string)
-	if err != OK:
-		return null
-	else:
-		return json.data
-
-
-static func fit_height(max_height: float, cur_size: Vector2i, callback: Callable) -> void:
-	var scale_ratio := max_height / (cur_size.y * Config.EDSCALE)
-	if scale_ratio < 1:
-		callback.call(Vector2i(
-			int(cur_size.x * Config.EDSCALE * scale_ratio),
-			int(cur_size.y * Config.EDSCALE * scale_ratio)
-		))
-
-
-static func disconnect_all(obj: Object) -> void:
-	for obj_signal in obj.get_signal_list():
-		for connection in obj.get_signal_connection_list(obj_signal.name as StringName):
-			obj.disconnect(obj_signal.name as StringName, connection.callable as Callable)
-
-
-static func prop_is_readonly() -> void:
-	assert(false, "Property is readonly")
-
-
-static func not_implemeted() -> Variant:
-	assert(false, "Not Implemented")
-	return null
-
-
-static func empty_func() -> void:
-	pass
-
-
-static func obj_has_method(obj: Variant, method: StringName) -> bool:
-	if obj is Object:
-		return (obj as Object).has_method(method)
-	else:
-		return false

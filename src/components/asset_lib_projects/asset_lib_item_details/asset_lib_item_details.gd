@@ -332,7 +332,7 @@ func add_preview(item: AssetLib.ItemPreview) -> Button:
 	_images_src.async_load_img(item.thumbnail, func(tex: Texture2D) -> void:
 		if not item.is_video:
 			if tex is ImageTexture:
-				utils.fit_height(85 * Config.EDSCALE, tex.get_size(), func(new_size: Vector2i) -> void:
+				UiLayout.fit_size_to_max_height(85 * Config.EDSCALE, tex.get_size(), Config.EDSCALE, func(new_size: Vector2i) -> void:
 					(tex as ImageTexture).set_size_override(new_size)
 				)
 			btn.icon = tex
@@ -341,7 +341,7 @@ func add_preview(item: AssetLib.ItemPreview) -> Button:
 			var tex_image: Image = tex.get_image()
 			if tex_image == null:
 				tex_image = get_theme_icon("FileBrokenBigThumb", "EditorIcons").get_image()
-			utils.fit_height(85 * Config.EDSCALE, tex_image.get_size(), func(new_size: Vector2i) -> void:
+			UiLayout.fit_size_to_max_height(85 * Config.EDSCALE, tex_image.get_size(), Config.EDSCALE, func(new_size: Vector2i) -> void:
 				tex_image.resize(new_size.x, new_size.y, Image.INTERPOLATE_LANCZOS)
 			)
 			var thumbnail := tex_image.duplicate() as Image
@@ -366,7 +366,7 @@ func _handle_btn_pressed(item: AssetLib.ItemPreview, btn: Button) -> void:
 	else:
 		_images_src.async_load_img(item.link, func(tex: Texture2D) -> void:
 			if tex is ImageTexture:
-				utils.fit_height(397 * Config.EDSCALE, tex.get_size(), func(new_size: Vector2i) -> void:
+				UiLayout.fit_size_to_max_height(397 * Config.EDSCALE, tex.get_size(), Config.EDSCALE, func(new_size: Vector2i) -> void:
 					(tex as ImageTexture).set_size_override(new_size)
 				)
 			_preview.texture = tex

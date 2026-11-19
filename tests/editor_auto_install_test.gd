@@ -129,7 +129,7 @@ func _test_download_row() -> void:
 		path.begins_with(_versions_path("")) and path.ends_with("/" + build.editor),
 		"The row's editor should be in the versions folder, got %s" % path,
 	)
-	var editor_name := utils.guess_editor_name(file_name.replace(".zip", ""))
+	var editor_name := EditorNameGuesser.guess_editor_name(file_name.replace(".zip", ""))
 	_check(
 		_calls == [["installed", editor_name, path], ["on_installed", editor_name, path]],
 		"The row should report the editor once, got %s" % [_calls],

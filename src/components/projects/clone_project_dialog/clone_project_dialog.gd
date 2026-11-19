@@ -74,7 +74,7 @@ func _emit_cloned(err: Error, output: Array, path: String) -> void:
 		_validate()
 		return
 	
-	var possible_project_files := utils.find_project_godot_files(path)
+	var possible_project_files := ProjectFileFinder.find_project_godot_files(path)
 	if len(possible_project_files) == 0:
 		_spawn_unable_to_find_project_godot_alert()
 		_validate()

@@ -1400,7 +1400,7 @@ func download_zip(
 		install_zip(
 			abs_path, 
 			file_name.replace(".zip", "").replace(".", "_"), 
-			utils.guess_editor_name(file_name.replace(".zip", "")),
+			EditorNameGuesser.guess_editor_name(file_name.replace(".zip", "")),
 			func() -> void: editor_download.queue_free(),
 			on_installed,
 		)
@@ -1460,11 +1460,11 @@ static func _versioned_editor_name(
 ) -> String:
 	if exec_path.is_empty() or not RemoteEditorInstallControl.is_named_like_editor(exec_path):
 		return ""
-	if utils.names_version(possible_editor_name):
+	if EditorNameGuesser.names_version(possible_editor_name):
 		return possible_editor_name
 	var in_archive := exec_path.trim_prefix(zip_content_dir.simplify_path()).trim_prefix("/")
-	var guessed := utils.guess_editor_name(in_archive)
-	return guessed if utils.names_version(guessed) else ""
+	var guessed := EditorNameGuesser.guess_editor_name(in_archive)
+	return guessed if EditorNameGuesser.names_version(guessed) else ""
 
 
 ## Whether an editor of the version and build (Standard or .NET, Godot or Redot) of

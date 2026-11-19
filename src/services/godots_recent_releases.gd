@@ -5,7 +5,7 @@ extends RefCounted
 
 class I:
 	func async_has_updates() -> bool:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 
 
 class Default extends I:

@@ -58,7 +58,7 @@ func section_of(obj: Variant) -> String:
 		section = obj
 	elif obj is Script:
 		section = obj.resource_path
-	elif utils.obj_has_method(obj, "get_script"):
+	elif ObjectHelpers.value_has_method(obj, "get_script"):
 		section = (obj as Object).get_script().resource_path
 	else:
 		assert(false, "Invalid scope type for cache section")

@@ -429,7 +429,7 @@ func _test_install_with_templates() -> void:
 	_check(request.archive_url.ends_with(STANDARD_TPZ), "Wrong archive %s" % request.archive_url)
 	_check(request.folder == "4.7.2.stable", "Wrong folder %s" % request.folder)
 	_check(
-		request.editor_name == utils.guess_editor_name(STANDARD_EDITOR),
+		request.editor_name == EditorNameGuesser.guess_editor_name(STANDARD_EDITOR),
 		"Wrong editor name %s" % request.editor_name,
 	)
 	await _wait_for_job(path)

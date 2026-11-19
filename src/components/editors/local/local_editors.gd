@@ -345,7 +345,7 @@ func _scan_editors(dir_to_scan: String) -> void:
 		var editor_exec_path := editor_exec.path
 		if _local_editors.has(editor_exec_path): continue
 
-		var editor := _local_editors.add(utils.guess_editor_name(editor_exec.file), editor_exec_path)
+		var editor := _local_editors.add(EditorNameGuesser.guess_editor_name(editor_exec.file), editor_exec_path)
 		_editors_list.add(editor)
 
 	_local_editors.save()

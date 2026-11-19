@@ -87,14 +87,14 @@ static func _fixed_guesses(editor_path: String) -> Array[PackedStringArray]:
 	if folder.containsn("mono"):
 		candidates.append(folder)
 	for candidate: String in candidates:
-		var old_guess := utils.legacy_guess_editor_name(candidate)
+		var old_guess := EditorNameGuesser.legacy_guess_editor_name(candidate)
 		# Without a version the old guess kept the name, which only happened
 		# wrongly to Mono zips cut at the version dot, like "Godot_v4".
 		var cut_at_version := old_guess.begins_with("Godot_v") \
 			and old_guess.trim_prefix("Godot_v").is_valid_int()
 		if old_guess == candidate.get_basename() and not cut_at_version:
 			continue
-		var fixed_guess := utils.guess_editor_name(candidate)
+		var fixed_guess := EditorNameGuesser.guess_editor_name(candidate)
 		if fixed_guess != old_guess and VersionHint.parse(fixed_guess).is_valid:
 			result.append(PackedStringArray([old_guess, fixed_guess]))
 	return result
@@ -454,7 +454,7 @@ class Item extends Object:
 
 	func _notification(what: int) -> void:
 		if what == NOTIFICATION_PREDELETE:
-			utils.disconnect_all(self)
+			ObjectHelpers.disconnect_all_signals(self)
 
 
 	func fmt_string(string_val: String) -> String:

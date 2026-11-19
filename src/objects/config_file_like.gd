@@ -4,19 +4,19 @@ extends RefCounted
 
 
 func set_value(section: String, key: String, value: Variant) -> void:
-	return utils.not_implemeted()
+	return ObjectHelpers.not_implemented()
 
 
 func get_value(section: String, key: String, default: Variant = null) -> Variant:
-	return utils.not_implemeted()
+	return ObjectHelpers.not_implemented()
 
 
 func has_section_key(section: String, key: String) -> bool:
-	return utils.not_implemeted()
+	return ObjectHelpers.not_implemented()
 
 
 func save(path: String) -> Error:
-	return utils.not_implemeted()
+	return ObjectHelpers.not_implemented()
 
 
 static func of_config(cfg: ConfigFile) -> IConfigFileLike:

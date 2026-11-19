@@ -88,7 +88,7 @@ class Response:
 		_resp = resp
 	
 	func to_json(safe:=true) -> Variant:
-		return utils.response_to_json(_resp, safe)
+		return JsonResponseParser.parse_http_response(_resp, safe)
 	
 	func get_string_from_utf8() -> String:
 		return body.get_string_from_utf8()

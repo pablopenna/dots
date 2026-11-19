@@ -80,7 +80,7 @@ static func params_to_search(params: Params) -> String:
 
 class _IUrlSearchParam:
 	func join(prev: String, params: Params) -> String:
-		return utils.not_implemeted()
+		return ObjectHelpers.not_implemented()
 
 
 class _UrlSearchParamBase extends _IUrlSearchParam:
@@ -210,7 +210,7 @@ class Fake extends I:
 		return Items.new(json as Dictionary)
 
 	func async_fetch_one(id: String) -> Item:
-		var json: Variant = utils.response_to_json(await HttpClient.async_http_get(
+		var json: Variant = JsonResponseParser.parse_http_response(await HttpClient.async_http_get(
 			_url.path_join("asset").path_join(id),
 			["Accept: application/vnd.github.v3+json"]
 		))
